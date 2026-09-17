@@ -38,7 +38,7 @@ if (requestMethod() === 'POST') {
                 'UPDATE tickets
                  SET status = ?,
                      assigned_admin_id = COALESCE(assigned_admin_id, ?),
-                     closed_at = CASE WHEN ? = "closed" THEN NOW() ELSE NULL END,
+                     closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE closed_at END,
                      updated_at = NOW()
                  WHERE id = ?'
             );
@@ -234,16 +234,20 @@ require __DIR__ . '/../includes/header.php';
                     <?php endforeach; ?>
                 </div>
 
-                <form method="post">
-                    <?= csrfField('admin_ticket_action') ?>
-                    <input type="hidden" name="action" value="send_message">
-                    <input type="hidden" name="ticket_id" value="<?= e((string) $selectedTicket['id']) ?>">
-                    <div class="mb-3">
-                        <label class="form-label" for="admin_reply_message">Antwort an User</label>
-                        <textarea class="form-control" id="admin_reply_message" name="message" rows="4" maxlength="2000" required></textarea>
-                    </div>
-                    <button class="btn btn-primary" type="submit">Antwort senden</button>
-                </form>
+                <?php if ($selectedStatus !== 'closed'): ?>
+                    <form method="post">
+                        <?= csrfField('admin_ticket_action') ?>
+                        <input type="hidden" name="action" value="send_message">
+                        <input type="hidden" name="ticket_id" value="<?= e((string) $selectedTicket['id']) ?>">
+                        <div class="mb-3">
+                            <label class="form-label" for="admin_reply_message">Antwort an User</label>
+                            <textarea class="form-control" id="admin_reply_message" name="message" rows="4" maxlength="2000" required></textarea>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Antwort senden</button>
+                    </form>
+                <?php else: ?>
+                    <div class="alert alert-secondary mb-0">Dieses Ticket ist geschlossen. Setze den Status auf open oder in_progress, um erneut zu antworten.</div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>

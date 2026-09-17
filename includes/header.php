@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/permissions.php';
 
 $title = $title ?? 'Mirage Projekt';
 $admin = $admin ?? null;
@@ -35,7 +36,9 @@ $mirageLogoImage = $mirageLogoImage ?? appUrl('/assets/img/mirage-vip-logo.svg')
         <nav class="nav flex-column gap-2">
             <a class="nav-link" href="<?= e(appUrl('/admin/dashboard')) ?>">Dashboard</a>
             <a class="nav-link" href="<?= e(appUrl('/admin/vouchers')) ?>">Voucher</a>
-            <a class="nav-link" href="<?= e(appUrl('/admin/tickets')) ?>">Tickets</a>
+            <?php if (canProcessTickets($admin)): ?>
+                <a class="nav-link" href="<?= e(appUrl('/admin/tickets')) ?>">Tickets</a>
+            <?php endif; ?>
             <?php if ((int)$admin['rank'] === 3): ?>
                 <a class="nav-link" href="<?= e(appUrl('/admin/users')) ?>">Benutzer</a>
                 <a class="nav-link" href="<?= e(appUrl('/admin/logs')) ?>">Logs</a>
