@@ -37,7 +37,7 @@ if (requestMethod() === 'POST') {
             $update = db()->prepare(
                 'UPDATE tickets
                  SET status = ?,
-                     assigned_admin_id = ?,
+                     assigned_admin_id = COALESCE(assigned_admin_id, ?),
                      closed_at = CASE WHEN ? = "closed" THEN NOW() ELSE NULL END,
                      updated_at = NOW()
                  WHERE id = ?'
@@ -48,13 +48,15 @@ if (requestMethod() === 'POST') {
         }
     } elseif ($action === 'send_message') {
         $message = mb_substr(trim((string) ($_POST['message'] ?? '')), 0, 2000);
-        if (mb_strlen($message) < 2) {
+        if ((string) $ticket['status'] === 'closed') {
+            $flash = ['type' => 'danger', 'msg' => 'Geschlossene Tickets können nicht beantwortet werden.'];
+        } elseif (mb_strlen($message) < 2) {
             $flash = ['type' => 'danger', 'msg' => 'Bitte gib eine Nachricht ein.'];
         } else {
             $pdo = db();
             $pdo->beginTransaction();
             try {
-                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_admin_id, message) VALUES (?, "admin", ?, ?)');
+                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "admin", NULL, ?, ?)');
                 $msgStmt->execute([$ticketId, (int) $admin['id'], $message]);
 
                 $upd = $pdo->prepare(

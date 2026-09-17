@@ -28,7 +28,7 @@ if (requestMethod() === 'POST') {
                 $stmt->execute([(int) $user['id'], $subject]);
                 $ticketId = (int) $pdo->lastInsertId();
 
-                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, message) VALUES (?, "user", ?, ?)');
+                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "user", ?, NULL, ?)');
                 $msgStmt->execute([$ticketId, (int) $user['id'], $message]);
                 $pdo->commit();
                 redirect('/dashboard/tickets?ticket=' . $ticketId . '&created=1');
@@ -57,7 +57,7 @@ if (requestMethod() === 'POST') {
             $pdo = db();
             $pdo->beginTransaction();
             try {
-                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, message) VALUES (?, "user", ?, ?)');
+                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "user", ?, NULL, ?)');
                 $msgStmt->execute([$ticketId, (int) $user['id'], $message]);
 
                 $upd = $pdo->prepare('UPDATE tickets SET last_message_at = NOW(), last_message_by = "user", updated_at = NOW() WHERE id = ?');

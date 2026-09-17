@@ -33,3 +33,34 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
         (sender_type = 'admin' AND sender_admin_id IS NOT NULL AND sender_user_id IS NULL)
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TRIGGER IF EXISTS trg_ticket_messages_validate_insert;
+DROP TRIGGER IF EXISTS trg_ticket_messages_validate_update;
+
+DELIMITER $$
+CREATE TRIGGER trg_ticket_messages_validate_insert
+BEFORE INSERT ON ticket_messages
+FOR EACH ROW
+BEGIN
+    IF NOT (
+        (NEW.sender_type = 'user' AND NEW.sender_user_id IS NOT NULL AND NEW.sender_admin_id IS NULL)
+        OR
+        (NEW.sender_type = 'admin' AND NEW.sender_admin_id IS NOT NULL AND NEW.sender_user_id IS NULL)
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid ticket message sender mapping.';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_ticket_messages_validate_update
+BEFORE UPDATE ON ticket_messages
+FOR EACH ROW
+BEGIN
+    IF NOT (
+        (NEW.sender_type = 'user' AND NEW.sender_user_id IS NOT NULL AND NEW.sender_admin_id IS NULL)
+        OR
+        (NEW.sender_type = 'admin' AND NEW.sender_admin_id IS NOT NULL AND NEW.sender_user_id IS NULL)
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid ticket message sender mapping.';
+    END IF;
+END$$
+DELIMITER ;
