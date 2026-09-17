@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     sender_admin_id BIGINT UNSIGNED NULL,
     message TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_ticket_messages_ticket_time (ticket_id, created_at),
+    INDEX idx_ticket_messages_ticket_time (ticket_id, created_at, id),
     CONSTRAINT fk_ticket_messages_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
     CONSTRAINT fk_ticket_messages_user FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE RESTRICT,
     CONSTRAINT fk_ticket_messages_admin FOREIGN KEY (sender_admin_id) REFERENCES admins(id) ON DELETE RESTRICT
