@@ -30,6 +30,12 @@ Empfohlen:
 mysql -u <user> -p <db_name> < database/schema.sql
 ```
 
+Zusätzlich für das Ticket-System:
+
+```bash
+mysql -u <user> -p <db_name> < database/ticket_system.sql
+```
+
 ## 5) Konfiguration
 
 1. `.env.example` nach `.env` kopieren.
@@ -68,11 +74,13 @@ Wichtige Routen:
 
 - `/login/telegram`
 - `/dashboard`
+- `/dashboard/tickets`
 - `/payment/voucher`
 - `/admin/login`
 - `/admin/register`
 - `/admin/dashboard`
 - `/admin/vouchers`
+- `/admin/tickets`
 - `/admin/users`
 - `/admin/logs`
 - `/admin/admins`

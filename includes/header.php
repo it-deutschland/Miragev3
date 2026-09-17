@@ -35,6 +35,7 @@ $mirageLogoImage = $mirageLogoImage ?? appUrl('/assets/img/mirage-vip-logo.svg')
         <nav class="nav flex-column gap-2">
             <a class="nav-link" href="<?= e(appUrl('/admin/dashboard')) ?>">Dashboard</a>
             <a class="nav-link" href="<?= e(appUrl('/admin/vouchers')) ?>">Voucher</a>
+            <a class="nav-link" href="<?= e(appUrl('/admin/tickets')) ?>">Tickets</a>
             <?php if ((int)$admin['rank'] === 3): ?>
                 <a class="nav-link" href="<?= e(appUrl('/admin/users')) ?>">Benutzer</a>
                 <a class="nav-link" href="<?= e(appUrl('/admin/logs')) ?>">Logs</a>

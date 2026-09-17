@@ -72,6 +72,14 @@ require __DIR__ . '/../includes/header.php';
                 </div>
                 <button class="btn btn-primary" type="submit">Voucher einreichen</button>
             </form>
+            <div class="muted-divider my-4"></div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <span class="cyber-chip">Support</span>
+                    <p class="text-secondary mb-0 mt-2">Hast du Fragen? Erstelle und verwalte deine Tickets direkt im Dashboard.</p>
+                </div>
+                <a class="btn btn-outline-info" href="<?= e(appUrl('/dashboard/tickets')) ?>">Zum Ticket-Center</a>
+            </div>
         </div>
     </div>
 </div>
