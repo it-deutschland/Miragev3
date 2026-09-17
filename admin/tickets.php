@@ -38,7 +38,7 @@ if (requestMethod() === 'POST') {
                 'UPDATE tickets
                  SET status = ?,
                      assigned_admin_id = COALESCE(assigned_admin_id, ?),
-                     closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE closed_at END,
+                     closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE NULL END,
                      updated_at = NOW()
                  WHERE id = ?'
             );
@@ -101,16 +101,18 @@ $tickets = db()->query(
         u.telegram_id,
         u.telegram_username,
         u.name AS user_name,
-        EXISTS(SELECT 1 FROM cryptovouchers cv1 WHERE cv1.user_id = t.user_id LIMIT 1) AS has_voucher,
-        (
-            SELECT cv2.status
-            FROM cryptovouchers cv2
-            WHERE cv2.user_id = t.user_id
-            ORDER BY cv2.submitted_at DESC
-            LIMIT 1
-        ) AS latest_voucher_status
+        COALESCE(v.has_voucher, 0) AS has_voucher,
+        v.latest_voucher_status
     FROM tickets t
     INNER JOIN users u ON u.id = t.user_id
+    LEFT JOIN (
+        SELECT
+            cv.user_id,
+            1 AS has_voucher,
+            SUBSTRING_INDEX(GROUP_CONCAT(cv.status ORDER BY cv.submitted_at DESC), ",", 1) AS latest_voucher_status
+        FROM cryptovouchers cv
+        GROUP BY cv.user_id
+    ) v ON v.user_id = t.user_id
     ORDER BY FIELD(t.status, "open", "in_progress", "closed"), t.last_message_at DESC
     LIMIT 300'
 )->fetchAll();
@@ -229,7 +231,7 @@ require __DIR__ . '/../includes/header.php';
                                 <?= (string) $message['sender_type'] === 'admin' ? 'Admin @' . e((string) ($message['admin_username'] ?? 'unknown')) : 'User' ?>
                                 · <?= e((string) $message['created_at']) ?>
                             </div>
-                            <div><?= nl2br(e((string) $message['message'])) ?></div>
+                            <div><?= nl2br(e((string) $message['message']), false) ?></div>
                         </div>
                     <?php endforeach; ?>
                 </div>

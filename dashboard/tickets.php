@@ -186,7 +186,7 @@ require __DIR__ . '/../includes/header.php';
                                 <?= (string) $message['sender_type'] === 'admin' ? 'Support' . ((string) ($message['admin_username'] ?? '') !== '' ? ' @' . e((string) $message['admin_username']) : '') : 'Du' ?>
                                 · <?= e((string) $message['created_at']) ?>
                             </div>
-                            <div><?= nl2br(e((string) $message['message'])) ?></div>
+                            <div><?= nl2br(e((string) $message['message']), false) ?></div>
                         </div>
                     <?php endforeach; ?>
                 </div>
