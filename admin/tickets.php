@@ -38,7 +38,7 @@ if (requestMethod() === 'POST') {
                 'UPDATE tickets
                  SET status = ?,
                      assigned_admin_id = COALESCE(assigned_admin_id, ?),
-                     closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE NULL END,
+                     closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE closed_at END,
                      updated_at = NOW()
                  WHERE id = ?'
             );

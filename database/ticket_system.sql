@@ -26,12 +26,7 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     INDEX idx_ticket_messages_ticket_time (ticket_id, created_at),
     CONSTRAINT fk_ticket_messages_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
     CONSTRAINT fk_ticket_messages_user FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT fk_ticket_messages_admin FOREIGN KEY (sender_admin_id) REFERENCES admins(id) ON DELETE SET NULL,
-    CONSTRAINT chk_ticket_message_sender CHECK (
-        (sender_type = 'user' AND sender_user_id IS NOT NULL AND sender_admin_id IS NULL)
-        OR
-        (sender_type = 'admin' AND sender_admin_id IS NOT NULL AND sender_user_id IS NULL)
-    )
+    CONSTRAINT fk_ticket_messages_admin FOREIGN KEY (sender_admin_id) REFERENCES admins(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TRIGGER IF EXISTS trg_ticket_messages_validate_insert;
