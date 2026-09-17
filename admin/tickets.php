@@ -11,7 +11,7 @@ require_once __DIR__ . '/../includes/logger.php';
 
 $admin = requireAdmin();
 requireActiveAdmin($admin);
-if (!canProcessVouchers($admin)) {
+if (!canProcessTickets($admin)) {
     http_response_code(403);
     exit('Forbidden');
 }
@@ -63,6 +63,7 @@ if (requestMethod() === 'POST') {
                     'UPDATE tickets
                      SET last_message_at = NOW(),
                          last_message_by = "admin",
+                         status = CASE WHEN status = "open" THEN "in_progress" ELSE status END,
                          assigned_admin_id = COALESCE(assigned_admin_id, ?),
                          updated_at = NOW()
                      WHERE id = ?'

@@ -18,6 +18,11 @@ function canProcessVouchers(array $admin): bool
     return in_array((int) $admin['rank'], [1, 2, 3], true);
 }
 
+function canProcessTickets(array $admin): bool
+{
+    return in_array((int) $admin['rank'], [1, 2, 3], true);
+}
+
 function canViewUsers(array $admin): bool
 {
     return (int) $admin['rank'] === 3;
