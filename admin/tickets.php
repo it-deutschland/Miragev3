@@ -112,32 +112,47 @@ if (isset($_GET['status'])) {
 }
 
 $tickets = db()->query(
-    'SELECT
-        t.id,
-        t.subject,
-        t.status,
-        t.created_at,
-        t.last_message_at,
-        t.last_message_by,
-        t.user_id,
-        t.assigned_admin_id,
-        u.telegram_id,
-        u.telegram_username,
-        u.name AS user_name,
-        COALESCE(v.has_voucher, 0) AS has_voucher,
-        v.latest_voucher_status
-    FROM tickets t
-    INNER JOIN users u ON u.id = t.user_id
-    LEFT JOIN (
+    'WITH ticket_scope AS (
+        SELECT
+            t.id,
+            t.subject,
+            t.status,
+            t.created_at,
+            t.last_message_at,
+            t.last_message_by,
+            t.user_id,
+            t.assigned_admin_id
+        FROM tickets t
+        ORDER BY FIELD(t.status, "open", "in_progress", "closed"), t.last_message_at DESC
+        LIMIT 300
+    ),
+    voucher_scope AS (
         SELECT
             cv.user_id,
             1 AS has_voucher,
             SUBSTRING_INDEX(GROUP_CONCAT(cv.status ORDER BY cv.submitted_at DESC), ",", 1) AS latest_voucher_status
         FROM cryptovouchers cv
+        INNER JOIN ticket_scope ts2 ON ts2.user_id = cv.user_id
         GROUP BY cv.user_id
-    ) v ON v.user_id = t.user_id
-    ORDER BY FIELD(t.status, "open", "in_progress", "closed"), t.last_message_at DESC
-    LIMIT 300'
+    )
+    SELECT
+        ts.id,
+        ts.subject,
+        ts.status,
+        ts.created_at,
+        ts.last_message_at,
+        ts.last_message_by,
+        ts.user_id,
+        ts.assigned_admin_id,
+        u.telegram_id,
+        u.telegram_username,
+        u.name AS user_name,
+        COALESCE(v.has_voucher, 0) AS has_voucher,
+        v.latest_voucher_status
+    FROM ticket_scope ts
+    INNER JOIN users u ON u.id = ts.user_id
+    LEFT JOIN voucher_scope v ON v.user_id = ts.user_id
+    ORDER BY FIELD(ts.status, "open", "in_progress", "closed"), ts.last_message_at DESC'
 )->fetchAll();
 
 $selectedTicket = null;

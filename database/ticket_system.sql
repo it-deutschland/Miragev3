@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_ticket_messages_ticket_time (ticket_id, created_at),
     CONSTRAINT fk_ticket_messages_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
-    CONSTRAINT fk_ticket_messages_user FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT fk_ticket_messages_admin FOREIGN KEY (sender_admin_id) REFERENCES admins(id) ON DELETE SET NULL
+    CONSTRAINT fk_ticket_messages_user FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ticket_messages_admin FOREIGN KEY (sender_admin_id) REFERENCES admins(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TRIGGER IF EXISTS trg_ticket_messages_validate_insert;
@@ -38,9 +38,9 @@ BEFORE INSERT ON ticket_messages
 FOR EACH ROW
 BEGIN
     IF NOT (
-        (NEW.sender_type = 'user' AND NEW.sender_admin_id IS NULL)
+        (NEW.sender_type = 'user' AND NEW.sender_user_id IS NOT NULL AND NEW.sender_admin_id IS NULL)
         OR
-        (NEW.sender_type = 'admin' AND NEW.sender_user_id IS NULL)
+        (NEW.sender_type = 'admin' AND NEW.sender_admin_id IS NOT NULL AND NEW.sender_user_id IS NULL)
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid ticket message sender mapping.';
     END IF;
@@ -51,9 +51,9 @@ BEFORE UPDATE ON ticket_messages
 FOR EACH ROW
 BEGIN
     IF NOT (
-        (NEW.sender_type = 'user' AND NEW.sender_admin_id IS NULL)
+        (NEW.sender_type = 'user' AND NEW.sender_user_id IS NOT NULL AND NEW.sender_admin_id IS NULL)
         OR
-        (NEW.sender_type = 'admin' AND NEW.sender_user_id IS NULL)
+        (NEW.sender_type = 'admin' AND NEW.sender_admin_id IS NOT NULL AND NEW.sender_user_id IS NULL)
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid ticket message sender mapping.';
     END IF;
