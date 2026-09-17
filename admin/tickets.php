@@ -22,56 +22,34 @@ if (requestMethod() === 'POST') {
     verifyCsrf('admin_ticket_action');
     $action = (string) ($_POST['action'] ?? '');
     $ticketId = (int) ($_POST['ticket_id'] ?? 0);
-
-    $ticketStmt = db()->prepare('SELECT id, status FROM tickets WHERE id = ? LIMIT 1');
-    $ticketStmt->execute([$ticketId]);
-    $ticket = $ticketStmt->fetch();
-
-    if (!$ticket) {
-        $flash = ['type' => 'danger', 'msg' => 'Ticket nicht gefunden.'];
-    } elseif ($action === 'set_status') {
+    if ($action === 'set_status') {
         $newStatus = (string) ($_POST['status'] ?? '');
         if (!in_array($newStatus, ['open', 'in_progress', 'closed'], true)) {
             $flash = ['type' => 'danger', 'msg' => 'Ungültiger Status.'];
         } else {
-            $update = db()->prepare(
-                'UPDATE tickets
-                 SET status = ?,
-                     assigned_admin_id = COALESCE(assigned_admin_id, ?),
-                     closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE closed_at END,
-                     updated_at = NOW()
-                 WHERE id = ?'
-            );
-            $update->execute([$newStatus, (int) $admin['id'], $newStatus, $ticketId]);
-            logAdminAction((int) $admin['id'], 'ticket_status_change', 'ticket', $ticketId, ['status' => $newStatus]);
-            redirect('/admin/tickets?ticket=' . $ticketId . '&status=1');
-        }
-    } elseif ($action === 'send_message') {
-        $message = mb_substr(trim((string) ($_POST['message'] ?? '')), 0, 2000);
-        if ((string) $ticket['status'] === 'closed') {
-            $flash = ['type' => 'danger', 'msg' => 'Geschlossene Tickets können nicht beantwortet werden.'];
-        } elseif (mb_strlen($message) < 2) {
-            $flash = ['type' => 'danger', 'msg' => 'Bitte gib eine Nachricht ein.'];
-        } else {
             $pdo = db();
             $pdo->beginTransaction();
             try {
-                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "admin", NULL, ?, ?)');
-                $msgStmt->execute([$ticketId, (int) $admin['id'], $message]);
-
-                $upd = $pdo->prepare(
-                    'UPDATE tickets
-                     SET last_message_at = NOW(),
-                         last_message_by = "admin",
-                         status = CASE WHEN status = "open" THEN "in_progress" ELSE status END,
-                         assigned_admin_id = COALESCE(assigned_admin_id, ?),
-                         updated_at = NOW()
-                     WHERE id = ?'
-                );
-                $upd->execute([(int) $admin['id'], $ticketId]);
-                $pdo->commit();
-                logAdminAction((int) $admin['id'], 'ticket_reply', 'ticket', $ticketId);
-                redirect('/admin/tickets?ticket=' . $ticketId . '&sent=1');
+                $ticketStmt = $pdo->prepare('SELECT id FROM tickets WHERE id = ? LIMIT 1 FOR UPDATE');
+                $ticketStmt->execute([$ticketId]);
+                $ticket = $ticketStmt->fetch();
+                if (!$ticket) {
+                    $pdo->rollBack();
+                    $flash = ['type' => 'danger', 'msg' => 'Ticket nicht gefunden.'];
+                } else {
+                    $update = $pdo->prepare(
+                        'UPDATE tickets
+                         SET status = ?,
+                             assigned_admin_id = COALESCE(assigned_admin_id, ?),
+                             closed_at = CASE WHEN ? = "closed" THEN COALESCE(closed_at, NOW()) ELSE NULL END,
+                             updated_at = NOW()
+                         WHERE id = ?'
+                    );
+                    $update->execute([$newStatus, (int) $admin['id'], $newStatus, $ticketId]);
+                    $pdo->commit();
+                    logAdminAction((int) $admin['id'], 'ticket_status_change', 'ticket', $ticketId, ['status' => $newStatus]);
+                    redirect('/admin/tickets?ticket=' . $ticketId . '&status=1');
+                }
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -79,6 +57,51 @@ if (requestMethod() === 'POST') {
                 throw $e;
             }
         }
+    } elseif ($action === 'send_message') {
+        $message = mb_substr(trim((string) ($_POST['message'] ?? '')), 0, 2000);
+        if (mb_strlen($message) < 2) {
+            $flash = ['type' => 'danger', 'msg' => 'Bitte gib eine Nachricht ein.'];
+        } else {
+            $pdo = db();
+            $pdo->beginTransaction();
+            try {
+                $ticketStmt = $pdo->prepare('SELECT id, status FROM tickets WHERE id = ? LIMIT 1 FOR UPDATE');
+                $ticketStmt->execute([$ticketId]);
+                $ticket = $ticketStmt->fetch();
+
+                if (!$ticket) {
+                    $pdo->rollBack();
+                    $flash = ['type' => 'danger', 'msg' => 'Ticket nicht gefunden.'];
+                } elseif ((string) $ticket['status'] === 'closed') {
+                    $pdo->rollBack();
+                    $flash = ['type' => 'danger', 'msg' => 'Geschlossene Tickets können nicht beantwortet werden.'];
+                } else {
+                    $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "admin", NULL, ?, ?)');
+                    $msgStmt->execute([$ticketId, (int) $admin['id'], $message]);
+
+                    $upd = $pdo->prepare(
+                        'UPDATE tickets
+                         SET last_message_at = NOW(),
+                             last_message_by = "admin",
+                             status = CASE WHEN status = "open" THEN "in_progress" ELSE status END,
+                             assigned_admin_id = COALESCE(assigned_admin_id, ?),
+                             updated_at = NOW()
+                         WHERE id = ?'
+                    );
+                    $upd->execute([(int) $admin['id'], $ticketId]);
+                    $pdo->commit();
+                    logAdminAction((int) $admin['id'], 'ticket_reply', 'ticket', $ticketId);
+                    redirect('/admin/tickets?ticket=' . $ticketId . '&sent=1');
+                }
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e;
+            }
+        }
+    } else {
+        $flash = ['type' => 'danger', 'msg' => 'Ungültige Ticket-Aktion.'];
     }
 }
 

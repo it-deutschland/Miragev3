@@ -38,9 +38,9 @@ BEFORE INSERT ON ticket_messages
 FOR EACH ROW
 BEGIN
     IF NOT (
-        (NEW.sender_type = 'user' AND NEW.sender_user_id IS NOT NULL AND NEW.sender_admin_id IS NULL)
+        (NEW.sender_type = 'user' AND NEW.sender_admin_id IS NULL)
         OR
-        (NEW.sender_type = 'admin' AND NEW.sender_admin_id IS NOT NULL AND NEW.sender_user_id IS NULL)
+        (NEW.sender_type = 'admin' AND NEW.sender_user_id IS NULL)
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid ticket message sender mapping.';
     END IF;
@@ -51,9 +51,9 @@ BEFORE UPDATE ON ticket_messages
 FOR EACH ROW
 BEGIN
     IF NOT (
-        (NEW.sender_type = 'user' AND NEW.sender_user_id IS NOT NULL AND NEW.sender_admin_id IS NULL)
+        (NEW.sender_type = 'user' AND NEW.sender_admin_id IS NULL)
         OR
-        (NEW.sender_type = 'admin' AND NEW.sender_admin_id IS NOT NULL AND NEW.sender_user_id IS NULL)
+        (NEW.sender_type = 'admin' AND NEW.sender_user_id IS NULL)
     ) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid ticket message sender mapping.';
     END IF;

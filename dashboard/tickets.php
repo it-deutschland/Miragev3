@@ -43,27 +43,31 @@ if (requestMethod() === 'POST') {
         $ticketId = (int) ($_POST['ticket_id'] ?? 0);
         $message = mb_substr(trim((string) ($_POST['message'] ?? '')), 0, 2000);
 
-        $ticketStmt = db()->prepare('SELECT id, status FROM tickets WHERE id = ? AND user_id = ? LIMIT 1');
-        $ticketStmt->execute([$ticketId, (int) $user['id']]);
-        $ticket = $ticketStmt->fetch();
-
-        if (!$ticket) {
-            $flash = ['type' => 'danger', 'msg' => 'Ticket nicht gefunden.'];
-        } elseif ((string) $ticket['status'] === 'closed') {
-            $flash = ['type' => 'danger', 'msg' => 'Dieses Ticket ist geschlossen.'];
-        } elseif (mb_strlen($message) < 2) {
+        if (mb_strlen($message) < 2) {
             $flash = ['type' => 'danger', 'msg' => 'Bitte gib eine Nachricht ein.'];
         } else {
             $pdo = db();
             $pdo->beginTransaction();
             try {
-                $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "user", ?, NULL, ?)');
-                $msgStmt->execute([$ticketId, (int) $user['id'], $message]);
+                $ticketStmt = $pdo->prepare('SELECT id, status FROM tickets WHERE id = ? AND user_id = ? LIMIT 1 FOR UPDATE');
+                $ticketStmt->execute([$ticketId, (int) $user['id']]);
+                $ticket = $ticketStmt->fetch();
 
-                $upd = $pdo->prepare('UPDATE tickets SET last_message_at = NOW(), last_message_by = "user", updated_at = NOW() WHERE id = ?');
-                $upd->execute([$ticketId]);
-                $pdo->commit();
-                redirect('/dashboard/tickets?ticket=' . $ticketId . '&sent=1');
+                if (!$ticket) {
+                    $pdo->rollBack();
+                    $flash = ['type' => 'danger', 'msg' => 'Ticket nicht gefunden.'];
+                } elseif ((string) $ticket['status'] === 'closed') {
+                    $pdo->rollBack();
+                    $flash = ['type' => 'danger', 'msg' => 'Dieses Ticket ist geschlossen.'];
+                } else {
+                    $msgStmt = $pdo->prepare('INSERT INTO ticket_messages (ticket_id, sender_type, sender_user_id, sender_admin_id, message) VALUES (?, "user", ?, NULL, ?)');
+                    $msgStmt->execute([$ticketId, (int) $user['id'], $message]);
+
+                    $upd = $pdo->prepare('UPDATE tickets SET last_message_at = NOW(), last_message_by = "user", updated_at = NOW() WHERE id = ?');
+                    $upd->execute([$ticketId]);
+                    $pdo->commit();
+                    redirect('/dashboard/tickets?ticket=' . $ticketId . '&sent=1');
+                }
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
